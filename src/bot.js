@@ -353,15 +353,24 @@ function startSelfPing() {
   const pingInterval = process.env.PING_INTERVAL || 300000; // 5 minutes
   const renderUrl = process.env.RENDER_URL;
   
-  setInterval(async () => {
+  setInterval(() => {
     try {
       // Ping bot itself using Render URL
-      if (bot.telegram && renderUrl) {
-        // Send HTTP request to keep service alive
+      if (renderUrl) {
         const https = require('https');
-        const response = await https.get(`${renderUrl}/health`);
-        console.log(`🏓 Self-ping sent to ${renderUrl}/health at ${new Date().toISOString()}`);
-        console.log(`📊 Response: ${response.statusCode}`);
+        const req = https.get(`${renderUrl}/health`, (res) => {
+          console.log(`🏓 Self-ping sent to ${renderUrl}/health at ${new Date().toISOString()}`);
+          console.log(`📊 Response: ${res.statusCode}`);
+        });
+        
+        req.on('error', (error) => {
+          console.error('❌ Self-ping request failed:', error.message);
+        });
+        
+        req.setTimeout(10000, () => {
+          req.destroy();
+          console.error('❌ Self-ping timeout after 10 seconds');
+        });
       }
     } catch (error) {
       console.error('❌ Self-ping failed:', error.message);
