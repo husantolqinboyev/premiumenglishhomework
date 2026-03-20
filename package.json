@@ -2,10 +2,10 @@
   "name": "premium-english-bot",
   "version": "1.0.0",
   "description": "Premium English Nazorat Bot - Node.js + Supabase",
-  "main": "index.js",
+  "main": "src/bot.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "start": "node src/bot.js",
+    "dev": "nodemon src/bot.js"
   },
   "dependencies": {
     "telegraf": "^4.15.3",
