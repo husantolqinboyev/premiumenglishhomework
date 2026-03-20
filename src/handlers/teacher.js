@@ -104,6 +104,7 @@ async function handleTeacherFlow(ctx, state, text) {
     case 'homework_check_coin': return await processHomeworkCoin(ctx, text);
 
     case 'edit_group_name': return await processEditGroupName(ctx, text);
+    case 'edit_group_link': return await processEditGroupLink(ctx, text);
     case 'edit_student_name': return await processEditStudentName(ctx, text);
   }
 }
@@ -206,6 +207,13 @@ async function processGroupStudentName(ctx, text) {
 async function processGroupLink(ctx, text) {
   const userId = ctx.from.id;
   const state = getState(userId);
+
+  if (state.step !== 'create_group_link') return; // Lock
+
+  // Clear state immediately to prevent multiple triggers
+  clearState(userId);
+
+  await ctx.reply('⏳ Guruh yaratilmoqda, iltimos kuting...');
 
   try {
     const teacherUser = await getUserByTelegramId(userId);
@@ -312,6 +320,36 @@ async function showGroupsList(ctx) {
   ]);
 
   await ctx.reply('📋 *Guruhlaringiz:*', {
+    parse_mode: 'Markdown',
+    ...Markup.inlineKeyboard(buttons)
+  });
+}
+
+// Guruh ma'lumotlarini ko'rsatish
+async function showGroupInfo(ctx, groupId) {
+  const group = await getGroupById(groupId);
+  if (!group) return;
+
+  const students = await getStudentsByGroup(groupId);
+
+  let text = `📁 *${group.name}*\n`;
+  if (group.description) text += `📝 ${group.description}\n`;
+  text += `🔗 Link: ${group.link || 'Yo\'q'}\n`;
+  text += `\n🎓 O'quvchilar (${students.length} ta):\n`;
+
+  const buttons = [
+    ...students.map(s => [Markup.button.callback(`🎓 ${s.name}`, `t_student_${s.id}`)]),
+    [
+      Markup.button.callback('✏️ Nomini tahrirlash', `t_edit_group_${groupId}`),
+      Markup.button.callback('🔗 Linkni tahrirlash', `t_edit_group_link_${groupId}`)
+    ],
+    [Markup.button.callback('🗑 O\'chirish', `t_delete_group_${groupId}`)],
+    [Markup.button.callback('◀️ Orqaga', 'back_to_groups')]
+  ];
+
+  students.forEach((s, i) => { text += `${i + 1}. ${s.name}\n`; });
+
+  await ctx.editMessageText(text, {
     parse_mode: 'Markdown',
     ...Markup.inlineKeyboard(buttons)
   });
@@ -605,36 +643,41 @@ async function handleTeacherActions(ctx) {
     }
   }
 
-  // Guruhni ko'rish
-  if (data.startsWith('t_view_group_')) {
+  // Group/Student Actions (Prefix based)
+  if (data.startsWith('t_edit_group_link_')) {
+    const groupId = parseInt(data.split('_')[4]);
+    setState(userId, 'edit_group_link', { groupId });
+    return await ctx.reply('🔗 Yangi guruh linkini yuboring:', cancelKeyboard());
+  }
+
+  if (data.startsWith('t_edit_group_')) {
+    const groupId = parseInt(data.split('_')[3]);
+    setState(userId, 'edit_group_name', { groupId });
+    return await ctx.reply('✏️ Yangi guruh nomini yozing:', cancelKeyboard());
+  }
+
+  if (data.startsWith('t_delete_group_')) {
     const groupId = parseInt(data.split('_')[3]);
     const group = await getGroupById(groupId);
     if (!group) return;
-
-    const students = await getStudentsByGroup(groupId);
-
-    let text = `📁 *${group.name}*\n`;
-    if (group.description) text += `📝 ${group.description}\n`;
-    text += `\n🎓 O\'quvchilar (${students.length} ta):\n`;
-
-    const buttons = [
-      ...students.map(s => [Markup.button.callback(`🎓 ${s.name}`, `t_student_${s.id}`)]),
-      [
-        Markup.button.callback('✏️ Tahrirlash', `t_edit_group_${groupId}`),
-        Markup.button.callback('🗑 O\'chirish', `t_delete_group_${groupId}`)
-      ],
-      [Markup.button.callback('◀️ Orqaga', 'back_to_groups')]
-    ];
-
-    students.forEach((s, i) => { text += `${i + 1}. ${s.name}\n`; });
-
-    return await ctx.editMessageText(text, {
-      parse_mode: 'Markdown',
-      ...Markup.inlineKeyboard(buttons)
-    });
+    await deleteGroup(groupId);
+    return await ctx.editMessageText(`✅ *${group.name}* guruhi o'chirildi.`, { parse_mode: 'Markdown' });
   }
 
-  // Student management
+  if (data.startsWith('t_edit_student_')) {
+    const studentId = parseInt(data.split('_')[3]);
+    setState(userId, 'edit_student_name', { studentId });
+    return await ctx.reply('✏️ Yangi ism familiyani yozing:', cancelKeyboard());
+  }
+
+  if (data.startsWith('t_delete_student_')) {
+    const studentId = parseInt(data.split('_')[3]);
+    const student = await getStudentById(studentId);
+    if (!student) return;
+    await deleteStudent(studentId);
+    return await ctx.editMessageText(`✅ *${student.name}* o'chirildi.`, { parse_mode: 'Markdown' });
+  }
+
   if (data.startsWith('t_student_')) {
     const studentId = parseInt(data.split('_')[2]);
     const student = await getStudentById(studentId);
@@ -656,36 +699,9 @@ async function handleTeacherActions(ctx) {
     );
   }
 
-  // Edit/Delete group
-  if (data.startsWith('t_edit_group_')) {
+  if (data.startsWith('t_view_group_')) {
     const groupId = parseInt(data.split('_')[3]);
-    setState(userId, 'edit_group_name', { groupId });
-    return await ctx.reply('✏️ Yangi guruh nomini yozing:', cancelKeyboard());
-  }
-
-  if (data.startsWith('t_delete_group_')) {
-    const groupId = parseInt(data.split('_')[3]);
-    const group = await getGroupById(groupId);
-    if (!group) return;
-    await deleteGroup(groupId);
-    return await ctx.editMessageText(`✅ *${group.name}* guruhi o\'chirildi.`, {
-      parse_mode: 'Markdown'
-    });
-  }
-
-  // Edit/Delete student
-  if (data.startsWith('t_edit_student_')) {
-    const studentId = parseInt(data.split('_')[3]);
-    setState(userId, 'edit_student_name', { studentId });
-    return await ctx.reply('✏️ Yangi ism familiyani yozing:', cancelKeyboard());
-  }
-
-  if (data.startsWith('t_delete_student_')) {
-    const studentId = parseInt(data.split('_')[3]);
-    const student = await getStudentById(studentId);
-    if (!student) return;
-    await deleteStudent(studentId);
-    return await ctx.editMessageText(`✅ *${student.name}* o\'chirildi.`, { parse_mode: 'Markdown' });
+    return await showGroupInfo(ctx, groupId);
   }
 
   if (data === 'back_to_groups') {
@@ -976,7 +992,21 @@ async function processEditStudentName(ctx, text) {
   try {
     await updateStudent(state.data.studentId, { name: text });
     clearState(userId);
-    await ctx.reply(`✅ O\'quvchi ismi *${text}* ga o\'zgartirildi.`, {
+    await ctx.reply(`✅ O'quvchi ismi *${text}* ga o'zgartirildi.`, {
+      parse_mode: 'Markdown', ...teacherMainMenu()
+    });
+  } catch (e) {
+    await ctx.reply('⚠️ Xatolik yuz berdi.');
+  }
+}
+
+async function processEditGroupLink(ctx, text) {
+  const userId = ctx.from.id;
+  const state = getState(userId);
+  try {
+    await updateGroup(state.data.groupId, { link: text });
+    clearState(userId);
+    await ctx.reply(`✅ Guruh linki yangilandi: ${text}`, {
       parse_mode: 'Markdown', ...teacherMainMenu()
     });
   } catch (e) {

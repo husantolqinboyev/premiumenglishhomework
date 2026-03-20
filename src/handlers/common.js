@@ -14,11 +14,19 @@ async function handleStart(ctx) {
   try {
     let user = await getUserByTelegramId(telegramId);
 
-    // Agar user yo'q bo'lsa va bu initial admin bo'lsa
+    // Agar user yo'q bo'lsa
     if (!user) {
       const initialAdminId = parseInt(process.env.INITIAL_ADMIN_ID);
-      const role = telegramId === initialAdminId ? 'admin' : 'student';
-      user = await createUser(telegramId, userName, role);
+      
+      // Faqat initial admin'ni bazaga qo'shamiz
+      if (telegramId === initialAdminId) {
+        user = await createUser(telegramId, userName, 'admin');
+        await showPanel(ctx, user.role, userName);
+      } else {
+        // Begona userlar uchun
+        await ctx.reply('🚫 *Sizga kirish mumkin emas!*\n\nIltimos, botdan foydalanish uchun o\'qituvchi bilan bog\'laning.', { parse_mode: 'Markdown' });
+      }
+      return;
     }
 
     await showPanel(ctx, user.role, userName);

@@ -87,9 +87,7 @@ bot.on('text', async (ctx) => {
   try {
     const user = await getUserByTelegramId(userId);
 
-    if (!user) {
-      return await ctx.reply('Iltimos /start bosing.');
-    }
+    if (!user) return; // Begona foydalanuvchini ignore qilish
 
     switch (user.role) {
       case 'admin':
@@ -147,7 +145,7 @@ bot.on('callback_query', async (ctx) => {
     const user = await getUserByTelegramId(userId);
 
     if (!user) {
-      await ctx.answerCbQuery('Iltimos /start bosing.');
+      await ctx.answerCbQuery(); // Faqat xabarni yopamiz
       return;
     }
 

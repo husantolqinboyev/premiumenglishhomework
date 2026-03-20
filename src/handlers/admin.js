@@ -120,6 +120,8 @@ async function handleAdminFlow(ctx, state, text) {
       return await processEditTeacherName(ctx, text);
     case 'edit_group_name':
       return await processEditGroupName(ctx, text);
+    case 'edit_group_link':
+      return await processEditGroupLink(ctx, text);
     case 'edit_student_name':
       return await processEditStudentName(ctx, text);
   }
@@ -275,6 +277,13 @@ async function processCreateGroupStudentName(ctx, text) {
 async function processCreateGroupLink(ctx, text) {
   const userId = ctx.from.id;
   const state = getState(userId);
+
+  if (state.step !== 'create_group_link') return; // Lock: already processing or processed
+  
+  // Set to idle immediately to prevent duplicate triggers
+  clearState(userId);
+
+  await ctx.reply('⏳ Guruh yaratilmoqda, iltimos kuting...');
 
   try {
     // Guruhni yaratish
@@ -462,7 +471,7 @@ async function showGroupsList(ctx) {
     if (teacherGroups.length) {
       text += `👨‍🏫 *${teacher.name || 'Ustoz'} (${teacher.telegram_id})*\n`;
       teacherGroups.forEach(g => {
-        text += `  📁 ${g.name}\n`;
+        text += `  📁 ${g.name}${g.link ? ` [Link](${g.link})` : ''}\n`;
       });
       text += '\n';
     }
@@ -669,15 +678,22 @@ async function handleAdminActions(ctx) {
 
     const students = await getStudentsByGroup(groupId);
 
-    let text = `📁 *${group.name}*\n👨‍🏫 O\'qituvchi: ${group.teacher?.name || 'Noma\'lum'}\n\n🎓 O\'quvchilar (${students.length} ta):\n`;
+    let text = `📁 *${group.name}*\n👨‍🏫 O\'qituvchi: ${group.teacher?.name || 'Noma\'lum'}\n🔗 Link: ${group.link || 'Yo\'q'}\n\n🎓 O\'quvchilar (${students.length} ta):\n`;
     students.forEach((s, i) => {
       text += `${i + 1}. ${s.name}\n`;
     });
 
+    const studentsButtons = students.map(s => [
+      require('telegraf').Markup.button.callback(`🎓 ${s.name}`, `admin_student_${s.id}`)
+    ]);
+
     const buttons = [
-      ...students.map(s => [
-        require('telegraf').Markup.button.callback(`🎓 ${s.name}`, `admin_student_${s.id}`)
-      ]),
+      ...studentsButtons,
+      [
+        require('telegraf').Markup.button.callback('✏️ Nomini tahrirlash', `edit_group_${groupId}`),
+        require('telegraf').Markup.button.callback('🔗 Linkni tahrirlash', `edit_group_link_${groupId}`)
+      ],
+      [require('telegraf').Markup.button.callback('🗑 O\'chirish', `delete_group_${groupId}`)],
       [require('telegraf').Markup.button.callback('◀️ Orqaga', `teacher_groups_${group.teacher_id}`)]
     ];
 
@@ -728,29 +744,6 @@ async function handleAdminActions(ctx) {
     });
   }
 
-  // Select teacher for adding student
-  if (data.startsWith('teacher_')) {
-    const teacherId = parseInt(data.split('_')[1]);
-    const groups = await getGroupsByTeacher(teacherId);
-    if (!groups.length) {
-      return await ctx.editMessageText('⚠️ Bu o\'qituvchida guruh yo\'q.');
-    }
-
-    setState(userId, 'add_student_select_group', { teacherUserId: teacherId });
-    await ctx.editMessageText(
-      '📁 Guruhni tanlang:',
-      groupsListKeyboard(groups, 'addstudent_group')
-    );
-  }
-
-  // Select group for adding student
-  if (data.startsWith('addstudent_group_')) {
-    const groupId = parseInt(data.split('_')[2]);
-    const state = getState(userId);
-    setState(userId, 'add_student_waiting_id', { ...state.data, groupId });
-    await ctx.reply('🎓 Student Telegram ID sini yuboring:', cancelKeyboard());
-  }
-
   // Statistics
   if (data.startsWith('stats_teacher_')) {
     const teacherUserId = parseInt(data.split('_')[2]);
@@ -761,6 +754,13 @@ async function handleAdminActions(ctx) {
     return await showStatisticsMenu(ctx);
   }
 
+  // Edit group link
+  if (data.startsWith('edit_group_link_')) {
+    const groupId = parseInt(data.split('_')[3]);
+    setState(userId, 'edit_group_link', { groupId });
+    return await ctx.reply('🔗 Yangi guruh linkini yuboring:', cancelKeyboard());
+  }
+
   // Group edit
   if (data.startsWith('edit_group_')) {
     const groupId = parseInt(data.split('_')[2]);
@@ -768,17 +768,29 @@ async function handleAdminActions(ctx) {
     return await ctx.reply('✏️ Yangi guruh nomini yozing:', cancelKeyboard());
   }
 
-  // Group delete
-  if (data.startsWith('delete_group_')) {
+  // Select group for adding student
+  if (data.startsWith('addstudent_group_')) {
     const groupId = parseInt(data.split('_')[2]);
-    const group = await getGroupById(groupId);
-    if (!group) return;
-
-    await deleteGroup(groupId);
-    await ctx.editMessageText(`✅ *${group.name}* guruhi o\'chirildi.`, { parse_mode: 'Markdown' });
+    const state2 = getState(userId);
+    setState(userId, 'add_student_waiting_id', { ...state2.data, groupId });
+    return await ctx.reply('🎓 Student Telegram ID sini yuboring:', cancelKeyboard());
   }
 
-  // Back to teachers
+  // Select teacher for adding student - CHECK THIS LAST to avoid collision with teacher_groups_
+  if (data.startsWith('teacher_')) {
+    const teacherId = parseInt(data.split('_')[1]);
+    const groups = await getGroupsByTeacher(teacherId);
+    if (!groups.length) {
+      return await ctx.editMessageText('⚠️ Bu o\'qituvchida guruh yo\'q.');
+    }
+
+    setState(userId, 'add_student_select_group', { teacherUserId: teacherId });
+    return await ctx.editMessageText(
+      '📁 Guruhni tanlang:',
+      groupsListKeyboard(groups, 'addstudent_group')
+    );
+  }
+
   if (data === 'back_to_teachers') {
     return await showTeachersList(ctx);
   }
@@ -793,20 +805,18 @@ async function processEditTeacherName(ctx, text) {
   const state = getState(userId);
 
   try {
-    const teacher = await getTeacherById(state.data.teacherId);
-    if (!teacher) return await ctx.reply('⚠️ O\'qituvchi topilmadi.');
-
     await require('../supabase').supabase
       .from('users')
       .update({ name: text })
       .eq('id', state.data.teacherId);
 
     clearState(userId);
-    await ctx.reply(`✅ O\'qituvchi ismi *${text}* ga o\'zgartirildi.`, {
+    await ctx.reply(`✅ O'qituvchi ismi *${text}* ga o'zgartirildi.`, {
       parse_mode: 'Markdown',
       ...adminMainMenu()
     });
   } catch (error) {
+    console.error('Edit teacher name error:', error);
     await ctx.reply('⚠️ Xatolik yuz berdi.');
   }
 }
@@ -818,11 +828,29 @@ async function processEditGroupName(ctx, text) {
   try {
     await updateGroup(state.data.groupId, { name: text });
     clearState(userId);
-    await ctx.reply(`✅ Guruh nomi *${text}* ga o\'zgartirildi.`, {
+    await ctx.reply(`✅ Guruh nomi *${text}* ga o'zgartirildi.`, {
       parse_mode: 'Markdown',
       ...adminMainMenu()
     });
   } catch (error) {
+    console.error('Edit group name error:', error);
+    await ctx.reply('⚠️ Xatolik yuz berdi.');
+  }
+}
+
+async function processEditGroupLink(ctx, text) {
+  const userId = ctx.from.id;
+  const state = getState(userId);
+
+  try {
+    await updateGroup(state.data.groupId, { link: text });
+    clearState(userId);
+    await ctx.reply(`✅ Guruh linki yangilandi: ${text}`, {
+      parse_mode: 'Markdown',
+      ...adminMainMenu()
+    });
+  } catch (error) {
+    console.error('Edit group link error:', error);
     await ctx.reply('⚠️ Xatolik yuz berdi.');
   }
 }
@@ -834,11 +862,12 @@ async function processEditStudentName(ctx, text) {
   try {
     await updateStudent(state.data.studentId, { name: text });
     clearState(userId);
-    await ctx.reply(`✅ O\'quvchi ismi *${text}* ga o\'zgartirildi.`, {
+    await ctx.reply(`✅ O'quvchi ismi *${text}* ga o'zgartirildi.`, {
       parse_mode: 'Markdown',
       ...adminMainMenu()
     });
   } catch (error) {
+    console.error('Edit student name error:', error);
     await ctx.reply('⚠️ Xatolik yuz berdi.');
   }
 }
