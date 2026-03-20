@@ -20,6 +20,33 @@ if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
 // =============================================
+// HEALTH CHECK & SELF-PING (for Render)
+// =============================================
+
+const http = require('http');
+const port = process.env.PORT || process.env.HEALTH_PORT || 3000;
+
+// Health check server
+http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('Bot is running\n');
+}).listen(port, () => {
+  console.log(`📡 Health check server listening on port ${port}`);
+});
+
+// Self-ping mechanism
+if (process.env.ENABLE_SELF_PING === 'true' && process.env.RENDER_URL) {
+  const pingInterval = parseInt(process.env.PING_INTERVAL) || 300000;
+  setInterval(() => {
+    http.get(process.env.RENDER_URL, (res) => {
+      console.log(`[${new Date().toISOString()}] Ping to ${process.env.RENDER_URL}: ${res.statusCode}`);
+    }).on('error', (err) => {
+      console.error('Ping error:', err.message);
+    });
+  }, pingInterval);
+}
+
+// =============================================
 // MIDDLEWARE
 // =============================================
 

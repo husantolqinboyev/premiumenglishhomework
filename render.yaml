@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: premium-english-bot
+    env: node
+    buildCommand: npm install
+    startCommand: node src/bot.js
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: INITIAL_ADMIN_ID
+        sync: false
+      - key: BOT_USERNAME
+        sync: false
+      - key: RENDER_URL
+        sync: false
+      - key: ENABLE_SELF_PING
+        value: "true"
+      - key: PING_INTERVAL
+        value: "300000"
+      - key: NODE_VERSION
+        value: 18.x
