@@ -652,9 +652,8 @@ async function handleAdminActions(ctx) {
     if (!group) return;
 
     await deleteGroup(groupId);
-    return await ctx.editMessageText(`✅ *${group.name}* guruhi o'chirildi.`, {
-      ...adminMainMenu()
-    });
+    await ctx.editMessageText(`✅ *${group.name}* guruhi muvaffaqiyatli o'chirildi.`);
+    return await ctx.reply('Asosiy menyuga qaytdingiz.', adminMainMenu());
   }
 
   // Select teacher for adding student
@@ -717,7 +716,8 @@ async function handleAdminActions(ctx) {
     const groups = await getGroupsByTeacher(teacherId);
     for (const group of groups) { await deleteGroup(group.id); }
     await deleteTeacher(teacherId);
-    return await ctx.editMessageText(`✅ O'qituvchi va ${groups.length} ta guruh o'chirildi.`, { ...adminMainMenu() });
+    await ctx.editMessageText(`✅ O'qituvchi va ${groups.length} ta guruh o'chirildi.`);
+    return await ctx.reply('Asosiy menyuga qaytdingiz.', adminMainMenu());
   }
 
   if (data.startsWith('admin_student_')) {
