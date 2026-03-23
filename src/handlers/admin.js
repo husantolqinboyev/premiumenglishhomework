@@ -598,7 +598,6 @@ async function handleAdminActions(ctx) {
     if (!teacher) return;
 
     const groups = await getGroupsByTeacher(teacherId);
-
     const buttons = groups.map(g => [
       require('telegraf').Markup.button.callback(`📁 ${g.name}`, `view_group_${g.id}`)
     ]);
@@ -646,6 +645,18 @@ async function handleAdminActions(ctx) {
     });
   }
 
+  // Delete group
+  if (data.startsWith('delete_group_')) {
+    const groupId = parseInt(data.split('_')[2]);
+    const group = await getGroupById(groupId);
+    if (!group) return;
+
+    await deleteGroup(groupId);
+    return await ctx.editMessageText(`✅ *${group.name}* guruhi o'chirildi.`, {
+      ...adminMainMenu()
+    });
+  }
+
   // Select teacher for adding student
   if (data.startsWith('teacher_') && !data.includes('_groups_') && !data.includes('stats_')) {
     const teacherId = parseInt(data.split('_')[1]);
@@ -666,15 +677,13 @@ async function handleAdminActions(ctx) {
   if (data === 'list_groups') return await showGroupsList(ctx);
   if (data === 'back_to_list_menu') return await showListMenu(ctx);
 
-  // Teacher management
+  // Remaining actions...
   if (data.startsWith('manage_teacher_')) {
     const teacherId = parseInt(data.split('_')[2]);
     const teacher = await getTeacherById(teacherId);
     if (!teacher) return;
-
     const groups = await getGroupsByTeacher(teacherId);
     let text = `👨‍🏫 *${teacher.name || 'Ustoz'}*\nID: \`${teacher.telegram_id}\`\nGuruhlar: ${groups.length} ta`;
-
     return await ctx.editMessageText(text, {
       parse_mode: 'Markdown',
       ...require('telegraf').Markup.inlineKeyboard([
@@ -685,103 +694,74 @@ async function handleAdminActions(ctx) {
     });
   }
 
-  // Edit teacher name
   if (data.startsWith('edit_teacher_')) {
     const teacherId = parseInt(data.split('_')[2]);
     setState(userId, 'edit_teacher_name', { teacherId });
     return await ctx.reply('✏️ Yangi ism familiyani yozing:', cancelKeyboard());
   }
 
-  // Delete teacher
   if (data.startsWith('delete_teacher_')) {
     const teacherId = parseInt(data.split('_')[2]);
     const teacher = await getTeacherById(teacherId);
     if (!teacher) return;
-
-    return await ctx.editMessageText(
-      `⚠️ *${teacher.name || 'Ustoz'}* o'qituvchisini o'chirishni tasdiqlaysizmi?\n\nGuruhlar ham o'chiriladi!`,
-      {
-        parse_mode: 'Markdown',
-        ...deleteTeacherKeyboard(teacherId)
-      }
-    );
+    return await ctx.editMessageText(`⚠️ *${teacher.name || 'Ustoz'}* o'qituvchisini o'chirishni tasdiqlaysizmi?\nGuruhlar ham o'chiriladi!`, {
+      parse_mode: 'Markdown',
+      ...deleteTeacherKeyboard(teacherId)
+    });
   }
 
-  // Delete with groups
   if (data.startsWith('delete_with_groups_')) {
     const teacherId = parseInt(data.split('_')[3]);
     const teacher = await getTeacherById(teacherId);
     if (!teacher) return;
-
-    // Guruhlarni topib o'chiramiz
     const groups = await getGroupsByTeacher(teacherId);
-    for (const group of groups) {
-      await deleteGroup(group.id);
-    }
+    for (const group of groups) { await deleteGroup(group.id); }
     await deleteTeacher(teacherId);
-
-    return await ctx.editMessageText(
-      `✅ O'qituvchi va ${groups.length} ta guruh o'chirildi.`,
-      { ...adminMainMenu() }
-    );
+    return await ctx.editMessageText(`✅ O'qituvchi va ${groups.length} ta guruh o'chirildi.`, { ...adminMainMenu() });
   }
 
-  // Student management (admin view)
   if (data.startsWith('admin_student_')) {
     const studentId = parseInt(data.split('_')[2]);
     const student = await getStudentById(studentId);
     if (!student) return;
-
-    return await ctx.editMessageText(
-      `🎓 *${student.name}*\nGuruh: ${student.group?.name || 'Noma\'lum'}`,
-      {
-        parse_mode: 'Markdown',
-        ...require('telegraf').Markup.inlineKeyboard([
-          [require('telegraf').Markup.button.callback('✏️ Tahrirlash', `edit_student_${studentId}`)],
-          [require('telegraf').Markup.button.callback('🗑 O\'chirish', `delete_student_${studentId}`)],
-          [require('telegraf').Markup.button.callback('◀️ Orqaga', `view_group_${student.group_id}`)]
-        ])
-      }
-    );
+    return await ctx.editMessageText(`🎓 *${student.name}*\nGuruh: ${student.group?.name || 'Noma\'lum'}`, {
+      parse_mode: 'Markdown',
+      ...require('telegraf').Markup.inlineKeyboard([
+        [require('telegraf').Markup.button.callback('✏️ Tahrirlash', `edit_student_${studentId}`)],
+        [require('telegraf').Markup.button.callback('🗑 O\'chirish', `delete_student_${studentId}`)],
+        [require('telegraf').Markup.button.callback('◀️ Orqaga', `view_group_${student.group_id}`)]
+      ])
+    });
   }
 
-  // Edit student
   if (data.startsWith('edit_student_')) {
     const studentId = parseInt(data.split('_')[2]);
     setState(userId, 'edit_student_name', { studentId });
     return await ctx.reply('✏️ Yangi ism familiyani yozing:', cancelKeyboard());
   }
 
-  // Delete student
   if (data.startsWith('delete_student_')) {
     const studentId = parseInt(data.split('_')[2]);
     const student = await getStudentById(studentId);
     if (!student) return;
-
     await deleteStudent(studentId);
     return await ctx.editMessageText(`✅ *${student.name}* o'quvchi o'chirildi.`, {
-      parse_mode: 'Markdown',
-      ...require('telegraf').Markup.inlineKeyboard([
-        [require('telegraf').Markup.button.callback('◀️ Orqaga', `view_group_${student.group_id}`)]
-      ])
+      parse_mode: 'Markdown', ...require('telegraf').Markup.inlineKeyboard([[require('telegraf').Markup.button.callback('◀️ Orqaga', `view_group_${student.group_id}`)]])
     });
   }
 
-  // Edit group link
   if (data.startsWith('edit_group_link_')) {
     const groupId = parseInt(data.split('_')[3]);
     setState(userId, 'edit_group_link', { groupId });
     return await ctx.reply('🔗 Yangi guruh linkini yuboring:', cancelKeyboard());
   }
 
-  // Group edit
   if (data.startsWith('edit_group_')) {
     const groupId = parseInt(data.split('_')[2]);
     setState(userId, 'edit_group_name', { groupId });
     return await ctx.reply('✏️ Yangi guruh nomini yozing:', cancelKeyboard());
   }
 
-  // Select group for adding student
   if (data.startsWith('addstudent_group_')) {
     const groupId = parseInt(data.split('_')[2]);
     const state2 = getState(userId);
