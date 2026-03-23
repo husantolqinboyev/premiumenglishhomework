@@ -106,9 +106,9 @@ async function handleAdminFlow(ctx, state, text) {
       return await processCreateGroupLink(ctx, text);
 
     // === O'quvchi qo'shish ===
-    case 'add_student_waiting_id':
+    case 'add_student_id':
       return await processAddStudentId(ctx, text);
-    case 'add_student_waiting_name':
+    case 'add_student_name':
       return await processAddStudentName(ctx, text);
 
     // === Admin qo'shish ===
@@ -150,7 +150,7 @@ async function processAddTeacherId(ctx, text) {
   try {
     let user = await getUserByTelegramId(targetId);
     if (!user) {
-      user = await createUser(targetId, `Teacher_${targetId}`, 'teacher');
+      user = await createUser(targetId, `Ustoz_${targetId}`, 'teacher');
     } else {
       await updateUserRole(targetId, 'teacher');
       user = await getUserByTelegramId(targetId);
@@ -159,11 +159,11 @@ async function processAddTeacherId(ctx, text) {
     clearState(userId);
 
     await ctx.reply(
-      `✅ *O\'qituvchi qo\'shildi!*\n\n👨‍🏫 ID: \`${targetId}\`\nIsm: ${user.name || 'Noma\'lum'}\nRole: Teacher`,
+      `✅ *O'qituvchi qo'shildi!* \n\n👨‍🏫 ID: \`${targetId}\`\nIsm: ${user?.name || 'Noma\'lum'}\nRole: Teacher`,
       { parse_mode: 'Markdown', ...adminMainMenu() }
     );
 
-    // O'qituvchiga xabar
+    // O'qituvchiga xabar yuborishni alohida blokda qilamiz
     try {
       const { teacherMainMenu } = require('../keyboards');
       await ctx.telegram.sendMessage(
@@ -171,12 +171,12 @@ async function processAddTeacherId(ctx, text) {
         '🎉 Siz o\'qituvchi roliga o\'tkazildingiz!\n\n👨‍🏫 *TEACHER PANEL* ochildi.',
         { parse_mode: 'Markdown', ...teacherMainMenu() }
       );
-    } catch (e) {
-      // Foydalanuvchi botni ishga tushirmagan bo'lishi mumkin
+    } catch (msgError) {
+      console.warn(`O'qituvchiga xabar yuborilmadi (u hali botga a'zo emas): ${msgError.message}`);
     }
   } catch (error) {
     console.error('Add teacher error:', error);
-    await ctx.reply('⚠️ Xatolik yuz berdi. Qaytadan urinib ko\'ring.');
+    await ctx.reply(`⚠️ Xatolik yuz berdi: ${error.message || error}`);
   }
 }
 
@@ -307,7 +307,7 @@ async function processCreateGroupLink(ctx, text) {
     );
   } catch (error) {
     console.error('Create group error:', error);
-    await ctx.reply('⚠️ Xatolik yuz berdi.');
+    await ctx.reply(`⚠️ Xatolik yuz berdi: ${error.message || error}`);
   }
 }
 
@@ -337,7 +337,7 @@ async function processAddStudentId(ctx, text) {
   }
 
   const state = getState(userId);
-  setState(userId, 'add_student_waiting_name', { ...state.data, studentTelegramId: studentId });
+  setState(userId, 'add_student_name', { ...state.data, studentTelegramId: studentId });
   await ctx.reply('✍️ O\'quvchining Ism Familiyasini yozing:');
 }
 
@@ -765,7 +765,7 @@ async function handleAdminActions(ctx) {
   if (data.startsWith('addstudent_group_')) {
     const groupId = parseInt(data.split('_')[2]);
     const state2 = getState(userId);
-    setState(userId, 'add_student_waiting_id', { ...state2.data, groupId });
+    setState(userId, 'add_student_id', { ...state2.data, groupId });
     return await ctx.reply('🎓 Student Telegram ID sini yuboring:', cancelKeyboard());
   }
 

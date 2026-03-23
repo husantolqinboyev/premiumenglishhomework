@@ -143,22 +143,37 @@ async function addStudentToGroup(telegramId, name, groupId) {
   if (!user) {
     user = await createUser(telegramId, name, 'student');
   } else {
+    // Agar user bo'lsa, rolini student qilamiz
     await supabase.from('users').update({ role: 'student', name }).eq('telegram_id', telegramId);
-    user = await getUserByTelegramId(telegramId);
   }
 
-  // Student jadvaliga qo'shamiz
-  const { data, error } = await supabase
+  // O'quvchi jadvalida bormi?
+  const { data: existingStudent } = await supabase
     .from('students')
-    .upsert({
-      telegram_id: telegramId,
-      name,
-      group_id: groupId
-    }, { onConflict: 'telegram_id' })
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
+    .select('id')
+    .eq('telegram_id', telegramId)
+    .maybeSingle();
+
+  if (existingStudent) {
+    // Bor bo'lsa guruhini yangilaymiz
+    const { data, error } = await supabase
+      .from('students')
+      .update({ name, group_id: groupId })
+      .eq('id', existingStudent.id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  } else {
+    // Yo'q bo'lsa yangi yaratamiz
+    const { data, error } = await supabase
+      .from('students')
+      .insert({ telegram_id: telegramId, name, group_id: groupId })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
 }
 
 async function getStudentsByGroup(groupId) {

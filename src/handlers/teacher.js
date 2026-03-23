@@ -246,7 +246,7 @@ async function processGroupLink(ctx, text) {
     );
   } catch (error) {
     console.error('Create group error:', error);
-    await ctx.reply('⚠️ Xatolik yuz berdi.');
+    await ctx.reply(`⚠️ Xatolik yuz berdi: ${error.message || error}`);
   }
 }
 
