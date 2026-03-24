@@ -150,7 +150,7 @@ async function processAddTeacherId(ctx, text) {
   try {
     let user = await getUserByTelegramId(targetId);
     if (!user) {
-      user = await createUser(targetId, `Ustoz_${targetId}`, 'teacher');
+      user = await createUser(targetId, `Ustoz ${targetId}`, 'teacher');
     } else {
       await updateUserRole(targetId, 'teacher');
       user = await getUserByTelegramId(targetId);
@@ -398,7 +398,7 @@ async function processAddAdminId(ctx, text) {
   try {
     let user = await getUserByTelegramId(targetId);
     if (!user) {
-      user = await createUser(targetId, `Admin_${targetId}`, 'admin');
+      user = await createUser(targetId, `Admin ${targetId}`, 'admin');
     } else {
       await updateUserRole(targetId, 'admin');
     }
