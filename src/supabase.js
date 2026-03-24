@@ -143,8 +143,9 @@ async function addStudentToGroup(telegramId, name, groupId) {
   if (!user) {
     user = await createUser(telegramId, name, 'student');
   } else {
-    // Agar user bo'lsa, rolini student qilamiz
-    await supabase.from('users').update({ role: 'student', name }).eq('telegram_id', telegramId);
+    // Agar user bo'lsa, faqat ismini yangilaymiz (rolini saqlab qolamiz)
+    // Bu admin yoki o'qituvchini adashib student qilib qo'ymaslik uchun kerak
+    await supabase.from('users').update({ name }).eq('telegram_id', telegramId);
   }
 
   // O'quvchi jadvalida bormi?
