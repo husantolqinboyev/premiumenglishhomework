@@ -236,7 +236,7 @@ async function processGroupLink(ctx, text) {
           `🎉 Siz *${group.name}* guruhiga qo\'shildingiz!`,
           { parse_mode: 'Markdown', ...studentMainMenu() }
         );
-      } catch (e) {}
+      } catch (e) { }
     }
 
     clearState(userId);
@@ -299,7 +299,7 @@ async function processAddStudentName(ctx, text) {
         `🎉 Siz *${group?.name}* guruhiga qo\'shildingiz!`,
         { parse_mode: 'Markdown', ...studentMainMenu() }
       );
-    } catch (e) {}
+    } catch (e) { }
   } catch (error) {
     await ctx.reply('⚠️ Xatolik yuz berdi.');
   }
@@ -403,7 +403,7 @@ async function processCoinAmount(ctx, text) {
         `🪙 Sizga *${amount} coin* berildi!\n💰 Jami coiningiz: ${total}`,
         { parse_mode: 'Markdown' }
       );
-    } catch (e) {}
+    } catch (e) { }
   } catch (error) {
     await ctx.reply('⚠️ Xatolik yuz berdi.');
   }
@@ -524,7 +524,7 @@ async function processHomeworkFeedback(ctx, fileInfo, text) {
             { parse_mode: 'Markdown' }
           );
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     setState(userId, 'homework_after_check', { ...state.data, submissionId: submission.id });
@@ -566,7 +566,7 @@ async function processHomeworkCoin(ctx, text) {
         `🪙 Vazifa uchun *${amount} coin* oldingiz!\n💰 Jami coiningiz: ${total}`,
         { parse_mode: 'Markdown' }
       );
-    } catch (e) {}
+    } catch (e) { }
   } catch (error) {
     await ctx.reply('⚠️ Xatolik yuz berdi.');
   }
@@ -801,7 +801,7 @@ async function handleTeacherActions(ctx) {
           for (const file of (hwState.data.files || [])) {
             await forwardFile(ctx, student.telegram_id, file);
           }
-        } catch (e) {}
+        } catch (e) { }
       }
 
       clearState(userId);
@@ -830,7 +830,7 @@ async function handleTeacherActions(ctx) {
         `hwcheck_hw_${h.id}`
       )
     ]);
-
+    //qaytish
     if (unlinked.length > 0) {
       buttons.unshift([
         Markup.button.callback(`📩 Erkin yuborilganlar (${unlinked.length})`, `hwcheck_unlinked_${groupId}`)
