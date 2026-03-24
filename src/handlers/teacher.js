@@ -818,9 +818,11 @@ async function handleTeacherActions(ctx) {
   // Homework - check
   if (data.startsWith('hwcheck_group_')) {
     const groupId = parseInt(data.split('_')[2]);
-    const { getHomeworksByGroup, getUnlinkedSubmissionsByGroup } = require('../supabase');
     const homeworks = await getHomeworksByGroup(groupId);
-    const unlinked = await getUnlinkedSubmissionsByGroup(groupId || 0);
+
+    if (!homeworks.length) {
+      return await ctx.reply('⚠️ Bu guruhda hali vazifa yo\'q.');
+    }
 
     setState(userId, 'homework_check_select_hw', { groupId });
 
@@ -830,47 +832,9 @@ async function handleTeacherActions(ctx) {
         `hwcheck_hw_${h.id}`
       )
     ]);
-
-    if (unlinked && unlinked.length > 0) {
-      buttons.unshift([
-        Markup.button.callback(`📩 Erkin yuborilganlar (${unlinked.length})`, `hwcheck_unlinked_${groupId}`)
-      ]);
-    }
-
-    if (!buttons.length) {
-      return await ctx.reply('⚠️ Bu guruhda hali topshirilgan vazifa yo\'q.');
-    }
-
     buttons.push([Markup.button.callback('❌ Bekor qilish', 'cancel')]);
-    return await ctx.editMessageText('📝 Vazifani yoki bo\'limni tanlang:', Markup.inlineKeyboard(buttons));
-  }
 
-  // Erkin yuborilganlar (Unlinked)
-  if (data.startsWith('hwcheck_unlinked_')) {
-    const groupId = parseInt(data.split('_')[2]);
-    const submissions = await getUnlinkedSubmissionsByGroup(groupId);
-
-    if (!submissions.length) {
-      return await ctx.reply('📭 Hali hech kim kimsiz vazifa yubormagan.');
-    }
-
-    setState(userId, 'homework_check_select_student', { groupId, isUnlinked: true });
-
-    // Tekshirilmaganlarni filter qilish
-    const notChecked = submissions.filter(s => !s.checked);
-    const buttons = notChecked.map(s => [
-      Markup.button.callback(`🎓 ${s.student?.name || 'O\'quvchi'}`, `hwcheck_sub_${s.id}`)
-    ]);
-
-    if (!buttons.length) {
-      return await ctx.reply('✅ Barcha erkin yuborilgan vazifalar tekshirilgan.');
-    }
-
-    buttons.push([Markup.button.callback('❌ Bekor qilish', 'cancel')]);
-    return await ctx.editMessageText(
-      `📩 Erkin yuborilganlar: ${submissions.length} ta\n✅ Tekshirilmagan: ${notChecked.length} ta\n\nO'quvchini tanlang:`,
-      Markup.inlineKeyboard(buttons)
-    );
+    return await ctx.editMessageText('📝 Vazifani tanlang:', Markup.inlineKeyboard(buttons));
   }
 
   if (data.startsWith('hwcheck_hw_')) {

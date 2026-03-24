@@ -317,24 +317,6 @@ async function getSubmissionsByHomework(homeworkId) {
   return data || [];
 }
 
-async function getUnlinkedSubmissionsByGroup(groupId) {
-  // Avval guruhdagi o'quvchilar listini olamiz
-  const students = await getStudentsByGroup(groupId);
-  const studentIds = students.map(s => s.id);
-
-  if (!studentIds.length) return [];
-
-  // Shu o'quvchilarning homework_id si NULL bo'lgan topshiriqlarini olamiz
-  const { data } = await supabase
-    .from('homework_submissions')
-    .select('*, student:student_id(name, telegram_id)')
-    .in('student_id', studentIds)
-    .is('homework_id', null)
-    .order('submitted_at', { ascending: false });
-    
-  return data || [];
-}
-
 async function getSubmissionsByStudent(studentId) {
   const { data } = await supabase
     .from('homework_submissions')
@@ -440,7 +422,6 @@ module.exports = {
   getHomeworkById,
   submitHomework,
   getSubmissionsByHomework,
-  getUnlinkedSubmissionsByGroup,
   getSubmissionsByStudent,
   getCheckedSubmissions,
   checkSubmission,
