@@ -39,7 +39,7 @@ const {
   studentMainMenu
 } = require('../keyboards');
 
-const { getFileInfo } = require('./common');
+const { getFileInfo, escapeMarkdown } = require('./common');
 const { Markup } = require('telegraf');
 
 // State management
@@ -236,7 +236,7 @@ async function processGroupLink(ctx, text) {
       try {
         await ctx.telegram.sendMessage(
           student.telegramId,
-          `🎉 Siz *${group.name}* guruhiga qo\'shildingiz!`,
+          `🎉 Siz *${escapeMarkdown(group.name)}* guruhiga qo\'shildingiz!`,
           { parse_mode: 'Markdown', ...studentMainMenu() }
         );
       } catch (e) { }
@@ -244,7 +244,7 @@ async function processGroupLink(ctx, text) {
 
     clearState(userId);
     await ctx.reply(
-      `✅ *Guruh yaratildi!*\n\n📁 Nom: ${group.name}\n🎓 O\'quvchilar: ${state.data.students?.length || 0} ta`,
+      `✅ *Guruh yaratildi!*\n\n📁 Nom: ${escapeMarkdown(group.name)}\n🎓 O\'quvchilar: ${state.data.students?.length || 0} ta`,
       { parse_mode: 'Markdown', ...teacherMainMenu() }
     );
   } catch (error) {
@@ -292,14 +292,14 @@ async function processAddStudentName(ctx, text) {
 
     clearState(userId);
     await ctx.reply(
-      `✅ *${text}* guruhga qo\'shildi!\n📁 Guruh: ${group?.name}`,
+      `✅ *${escapeMarkdown(text)}* guruhga qo\'shildi!\n📁 Guruh: ${escapeMarkdown(group?.name || '')}`,
       { parse_mode: 'Markdown', ...teacherMainMenu() }
     );
 
     try {
       await ctx.telegram.sendMessage(
         state.data.studentTelegramId,
-        `🎉 Siz *${group?.name}* guruhiga qo\'shildingiz!`,
+        `🎉 Siz *${escapeMarkdown(group?.name || '')}* guruhiga qo\'shildingiz!`,
         { parse_mode: 'Markdown', ...studentMainMenu() }
       );
     } catch (e) { }

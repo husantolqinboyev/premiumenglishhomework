@@ -36,6 +36,8 @@ const {
   cancelKeyboard
 } = require('../keyboards');
 
+const { escapeMarkdown } = require('./common');
+
 // Admin state'larini boshqarish
 const adminStates = new Map();
 
@@ -159,7 +161,7 @@ async function processAddTeacherId(ctx, text) {
     clearState(userId);
 
     await ctx.reply(
-      `✅ *O'qituvchi qo'shildi!* \n\n👨‍🏫 ID: \`${targetId}\`\nIsm: ${user?.name || 'Noma\'lum'}\nRole: Teacher`,
+      `✅ *O'qituvchi qo'shildi!* \n\n👨‍🏫 ID: \`${targetId}\`\nIsm: ${escapeMarkdown(user?.name || 'Noma\'lum')}\nRole: Teacher`,
       { parse_mode: 'Markdown', ...adminMainMenu() }
     );
 
@@ -302,7 +304,7 @@ async function processCreateGroupLink(ctx, text) {
     clearState(userId);
 
     await ctx.reply(
-      `✅ *Guruh muvaffaqiyatli yaratildi!*\n\n📁 Nom: ${group.name}\n👨‍🏫 O\'qituvchi ID: ${state.data.teacherTelegramId}\n🎓 O\'quvchilar: ${state.data.students?.length || 0} ta\n🔗 Link: ${text}`,
+      `✅ *Guruh muvaffaqiyatli yaratildi!*\n\n📁 Nom: ${escapeMarkdown(group.name)}\n👨‍🏫 O\'qituvchi ID: ${state.data.teacherTelegramId}\n🎓 O\'quvchilar: ${state.data.students?.length || 0} ta\n🔗 Link: ${text}`,
       { parse_mode: 'Markdown', ...adminMainMenu() }
     );
   } catch (error) {
@@ -356,7 +358,7 @@ async function processAddStudentName(ctx, text) {
     const group = await getGroupById(state.data.groupId);
 
     await ctx.reply(
-      `✅ *O\'quvchi qo\'shildi!*\n\n🎓 Ism: ${text}\n📁 Guruh: ${group?.name || 'Noma\'lum'}`,
+      `✅ *O\'quvchi qo\'shildi!*\n\n🎓 Ism: ${escapeMarkdown(text)}\n📁 Guruh: ${escapeMarkdown(group?.name || 'Noma\'lum')}`,
       { parse_mode: 'Markdown', ...adminMainMenu() }
     );
 
@@ -469,9 +471,9 @@ async function showGroupsList(ctx) {
   for (const teacher of teachers) {
     const teacherGroups = allGroups.filter(g => g.teacher_id === teacher.id);
     if (teacherGroups.length) {
-      text += `👨‍🏫 *${teacher.name || 'Ustoz'} (${teacher.telegram_id})*\n`;
+      text += `👨‍🏫 *${escapeMarkdown(teacher.name || 'Ustoz')} (${teacher.telegram_id})*\n`;
       teacherGroups.forEach(g => {
-        text += `  📁 ${g.name}${g.link ? ` [Link](${g.link})` : ''}\n`;
+        text += `  📁 ${escapeMarkdown(g.name)}${g.link ? ` [Link](${g.link})` : ''}\n`;
       });
       text += '\n';
     }
@@ -520,16 +522,16 @@ async function showTeacherStats(ctx, teacherUserId) {
 
   const groups = await getGroupsByTeacher(teacherUserId);
 
-  let text = `📊 *${teacher.name || 'O\'qituvchi'} statistikasi*\n\n`;
+  let text = `📊 *${escapeMarkdown(teacher.name || 'O\'qituvchi')} statistikasi*\n\n`;
   text += `Jami guruhlar: ${groups.length} ta\n\n`;
 
   let totalStudents = 0;
   for (const group of groups) {
     const stats = await getGroupStats(group.id);
     totalStudents += stats.length;
-    text += `📁 *${group.name}* — ${stats.length} o\'quvchi\n`;
+    text += `📁 *${escapeMarkdown(group.name)}* — ${stats.length} o\'quvchi\n`;
     stats.slice(0, 5).forEach(s => {
-      text += `  🎓 ${s.name} — ${s.monthlyCoins} coin (1 oylik)\n`;
+      text += `  🎓 ${escapeMarkdown(s.name)} — ${s.monthlyCoins} coin (1 oylik)\n`;
     });
     text += '\n';
   }

@@ -40,17 +40,17 @@ async function handleStart(ctx) {
 async function showPanel(ctx, role, name = '') {
   if (role === 'admin') {
     await ctx.reply(
-      `🔐 *ADMIN PANEL*\n\nXush kelibsiz, ${name}!`,
+      `🔐 *ADMIN PANEL*\n\nXush kelibsiz, ${escapeMarkdown(name)}!`,
       { parse_mode: 'Markdown', ...adminMainMenu() }
     );
   } else if (role === 'teacher') {
     await ctx.reply(
-      `👨‍🏫 *TEACHER PANEL*\n\nXush kelibsiz, ${name}!`,
+      `👨‍🏫 *TEACHER PANEL*\n\nXush kelibsiz, ${escapeMarkdown(name)}!`,
       { parse_mode: 'Markdown', ...teacherMainMenu() }
     );
   } else if (role === 'student') {
     await ctx.reply(
-      `🎓 *STUDENT PANEL*\n\nXush kelibsiz, ${name}!`,
+      `🎓 *STUDENT PANEL*\n\nXush kelibsiz, ${escapeMarkdown(name)}!`,
       { parse_mode: 'Markdown', ...studentMainMenu() }
     );
   } else {
@@ -118,4 +118,10 @@ async function forwardFile(bot, chatId, fileInfo, caption = '') {
   }
 }
 
-module.exports = { handleStart, showPanel, getFileInfo, sendFile, forwardFile };
+function escapeMarkdown(text) {
+  if (!text) return '';
+  // Markdown (Legacy) special characters: _, *, [, `
+  return text.toString().replace(/([_*\[`])/g, '\\$1');
+}
+
+module.exports = { handleStart, showPanel, getFileInfo, sendFile, forwardFile, escapeMarkdown };
