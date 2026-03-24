@@ -160,28 +160,32 @@ async function processAddTeacherId(ctx, text) {
       user = await createUser(targetId, `Ustoz ${targetId}`, 'teacher');
     } else if (user.role === 'teacher') {
       clearState(userId);
-      return await ctx.reply(`ℹ️ Bu foydalanuvchi allaqachon o'qituvchi sifatida mavjud.\n\n👨‍🏫 ID: \`${targetId}\`\nIsm: ${escapeMarkdown(user.name || 'Noma\'lum')}`, {
-        parse_mode: 'Markdown',
+      const safeName = (user.name || 'Noma\'lum').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return await ctx.reply(`ℹ️ <b>Bu foydalanuvchi allaqachon o'qituvchi sifatida mavjud.</b>\n\n👨‍🏫 ID: <code>${targetId}</code>\nIsm: ${safeName}`, {
+        parse_mode: 'HTML',
         ...adminMainMenu()
       });
     } else {
+      // Mavjud user rolimni yangilash
       await updateUserRole(targetId, 'teacher');
       user = await getUserByTelegramId(targetId);
     }
 
     clearState(userId);
 
+    const safeNameSuccess = (user?.name || 'Noma\'lum').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     await ctx.reply(
-      `✅ *O'qituvchi qo'shildi!* \n\n👨‍🏫 ID: \`${targetId}\`\nIsm: ${escapeMarkdown(user?.name || 'Noma\'lum')}\nRole: Teacher`,
-      { parse_mode: 'Markdown', ...adminMainMenu() }
+      `✅ <b>O'qituvchi qo'shildi!</b>\n\n👨‍🏫 ID: <code>${targetId}</code>\nIsm: ${safeNameSuccess}\nRole: Teacher`,
+      { parse_mode: 'HTML', ...adminMainMenu() }
     );
 
+    // O'qituvchiga xabar yuborish
     try {
       const { teacherMainMenu } = require('../keyboards');
       await ctx.telegram.sendMessage(
         targetId,
-        '🎉 Siz o\'qituvchi roliga o\'tkazildingiz!\n\n👨‍🏫 *TEACHER PANEL* ochildi.\nBotni /start qilib qaytadan ishga tushiring.',
-        { parse_mode: 'Markdown', ...teacherMainMenu() }
+        '🎉 <b>Siz o\'qituvchi roliga o\'tkazildingiz!</b>\n\n👨‍🏫 <b>TEACHER PANEL</b> ochildi.\nBotni /start qilib qaytadan ishga tushiring.',
+        { parse_mode: 'HTML', ...teacherMainMenu() }
       );
     } catch (msgError) {
       console.warn(`O'qituvchiga xabar yuborilmadi: ${msgError.message}`);
