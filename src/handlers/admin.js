@@ -143,16 +143,27 @@ async function startAddTeacher(ctx) {
 
 async function processAddTeacherId(ctx, text) {
   const userId = ctx.from.id;
-  const targetId = parseInt(text);
+  const targetId = parseInt(text.trim());
 
   if (isNaN(targetId)) {
     return await ctx.reply('⚠️ Noto\'g\'ri ID. Raqam kiriting:');
   }
 
+  if (targetId === userId) {
+    return await ctx.reply('⚠️ O\'zingizni o\'qituvchi qilib qo\'shmang, aks holda Admin panelidan mahrum bo\'lasiz.');
+  }
+
   try {
     let user = await getUserByTelegramId(targetId);
+    
     if (!user) {
       user = await createUser(targetId, `Ustoz ${targetId}`, 'teacher');
+    } else if (user.role === 'teacher') {
+      clearState(userId);
+      return await ctx.reply(`ℹ️ Bu foydalanuvchi allaqachon o'qituvchi sifatida mavjud.\n\n👨‍🏫 ID: \`${targetId}\`\nIsm: ${escapeMarkdown(user.name || 'Noma\'lum')}`, {
+        parse_mode: 'Markdown',
+        ...adminMainMenu()
+      });
     } else {
       await updateUserRole(targetId, 'teacher');
       user = await getUserByTelegramId(targetId);
@@ -165,22 +176,22 @@ async function processAddTeacherId(ctx, text) {
       { parse_mode: 'Markdown', ...adminMainMenu() }
     );
 
-    // O'qituvchiga xabar yuborishni alohida blokda qilamiz
     try {
       const { teacherMainMenu } = require('../keyboards');
       await ctx.telegram.sendMessage(
         targetId,
-        '🎉 Siz o\'qituvchi roliga o\'tkazildingiz!\n\n👨‍🏫 *TEACHER PANEL* ochildi.',
+        '🎉 Siz o\'qituvchi roliga o\'tkazildingiz!\n\n👨‍🏫 *TEACHER PANEL* ochildi.\nBotni /start qilib qaytadan ishga tushiring.',
         { parse_mode: 'Markdown', ...teacherMainMenu() }
       );
     } catch (msgError) {
-      console.warn(`O'qituvchiga xabar yuborilmadi (u hali botga a'zo emas): ${msgError.message}`);
+      console.warn(`O'qituvchiga xabar yuborilmadi: ${msgError.message}`);
     }
   } catch (error) {
     console.error('Add teacher error:', error);
     await ctx.reply(`⚠️ Xatolik yuz berdi: ${error.message || error}`);
   }
 }
+
 
 // =============================================
 // GURUH YARATISH
