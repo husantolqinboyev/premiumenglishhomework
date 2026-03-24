@@ -108,6 +108,9 @@ async function handleTeacherFlow(ctx, state, text) {
     case 'edit_group_name': return await processEditGroupName(ctx, text);
     case 'edit_group_link': return await processEditGroupLink(ctx, text);
     case 'edit_student_name': return await processEditStudentName(ctx, text);
+    case 'homework_after_check': return await ctx.reply('Nima qilishni xohlaysiz?', afterCheckKeyboard(state.data.submissionId));
+    case 'create_group_ask_assistant': return await askAssistant(ctx);
+    case 'homework_ready_to_send': return await ctx.reply('📤 Vazifa yuborilsinmi?', sendHomeworkKeyboard());
   }
 }
 
@@ -832,12 +835,6 @@ async function handleTeacherActions(ctx) {
         `hwcheck_hw_${h.id}`
       )
     ]);
-
-    if (unlinked.length > 0) {
-      buttons.unshift([
-        Markup.button.callback(`📩 Erkin yuborilganlar (${unlinked.length})`, `hwcheck_unlinked_${groupId}`)
-      ]);
-    }
 
     if (!buttons.length) {
       return await ctx.reply('⚠️ Bu guruhda hali topshirilgan vazifa yo\'q.');
