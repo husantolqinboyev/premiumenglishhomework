@@ -79,33 +79,16 @@ async function startSubmitHomework(ctx) {
     return await ctx.reply('⚠️ Siz hali hech qaysi guruhga qo\'shilmagansiz.');
   }
 
-  const homeworks = await getHomeworksByGroup(student.group_id);
-  if (!homeworks.length) {
-    return await ctx.reply('📭 Hozirda aktiv vazifa yo\'q.');
-  }
-
-  // Deadline o'tmagan vazifalarni filter
-  const now = new Date();
-  const activeHomeworks = homeworks.filter(h => !h.deadline || new Date(h.deadline) > now);
-
-  if (!activeHomeworks.length) {
-    return await ctx.reply('⏰ Barcha vazifalar deadline\'dan o\'tdi.');
-  }
-
-  setState(userId, 'homework_select', { studentId: student.id });
-
-  const buttons = activeHomeworks.map((h, i) => {
-    const deadline = h.deadline ? dayjs(h.deadline).format('DD.MM HH:mm') : 'yo\'q';
-    return [Markup.button.callback(
-      `📝 ${i + 1}-vazifa (deadline: ${deadline})`,
-      `student_hw_${h.id}`
-    )];
+  // Vazifa tanlash bosqichini o'tkazib yuboramiz va darhol fayl so'raymiz
+  setState(userId, 'homework_sending', { 
+    studentId: student.id,
+    homeworkId: null, // Muayyan vazifaga bog'lanmagan
+    files: [] 
   });
-  buttons.push([Markup.button.callback('❌ Bekor qilish', 'student_cancel')]);
 
   await ctx.reply(
-    '📤 *Vazifa yuborish*\n\nVazifani tanlang:',
-    { parse_mode: 'Markdown', ...Markup.inlineKeyboard(buttons) }
+    '📤 *Vazifa yuborish*\n\nIltimos, vazifa materiallarini yuboring (rasm, fayl, video yoki audio).\nHamma materiallarni yuborib bo\'lgach, "✅ Yakunlash" tugmasini bosing:',
+    { parse_mode: 'Markdown', ...studentHomeworkDoneKeyboard() }
   );
 }
 
