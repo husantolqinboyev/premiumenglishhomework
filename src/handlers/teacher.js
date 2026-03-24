@@ -820,7 +820,7 @@ async function handleTeacherActions(ctx) {
     const groupId = parseInt(data.split('_')[2]);
     const { getHomeworksByGroup, getUnlinkedSubmissionsByGroup } = require('../supabase');
     const homeworks = await getHomeworksByGroup(groupId);
-    const unlinked = await getUnlinkedSubmissionsByGroup(groupId);
+    const unlinked = await getUnlinkedSubmissionsByGroup(groupId || 0);
 
     setState(userId, 'homework_check_select_hw', { groupId });
 
@@ -831,7 +831,7 @@ async function handleTeacherActions(ctx) {
       )
     ]);
 
-    if (unlinked.length > 0) {
+    if (unlinked && unlinked.length > 0) {
       buttons.unshift([
         Markup.button.callback(`📩 Erkin yuborilganlar (${unlinked.length})`, `hwcheck_unlinked_${groupId}`)
       ]);
