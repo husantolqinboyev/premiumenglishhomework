@@ -64,19 +64,31 @@ function clearState(userId) {
 async function handleTeacherText(ctx) {
   const userId = ctx.from.id;
   const text = ctx.message?.text || '';
-  const state = getState(userId);
 
-  if (state.step === 'idle') {
-    switch (text) {
-      case '➕ Guruh qo\'shish': return await startCreateGroup(ctx);
-      case '🎓 O\'quvchi qo\'shish': return await startAddStudent(ctx);
-      case '📋 Ro\'yxat': return await showGroupsList(ctx);
-      case '🪙 Coin berish': return await startGiveCoin(ctx);
-      case '📚 Vazifalar': return await showHomeworkMenu(ctx);
-      case '📊 Statistika': return await showStatistics(ctx);
-    }
-    return;
+  // Har doim menyu tugmalarini tekshirish (holatdan qat'iy nazar)
+  switch (text) {
+    case '➕ Guruh qo\'shish': 
+      clearState(userId); 
+      return await startCreateGroup(ctx);
+    case '🎓 O\'quvchi qo\'shish': 
+      clearState(userId); 
+      return await startAddStudent(ctx);
+    case '📋 Ro\'yxat': 
+      clearState(userId); 
+      return await showGroupsList(ctx);
+    case '🪙 Coin berish': 
+      clearState(userId); 
+      return await startGiveCoin(ctx);
+    case '📚 Vazifalar': 
+      clearState(userId); 
+      return await showHomeworkMenu(ctx);
+    case '📊 Statistika': 
+      clearState(userId); 
+      return await showStatistics(ctx);
   }
+
+  const state = getState(userId);
+  if (state.step === 'idle') return;
 
   await handleTeacherFlow(ctx, state, text);
 }
@@ -111,6 +123,8 @@ async function handleTeacherFlow(ctx, state, text) {
     case 'homework_after_check': return await ctx.reply('Nima qilishni xohlaysiz?', afterCheckKeyboard(state.data.submissionId));
     case 'create_group_ask_assistant': return await askAssistant(ctx);
     case 'homework_ready_to_send': return await ctx.reply('📤 Vazifa yuborilsinmi?', sendHomeworkKeyboard());
+    default:
+      return await ctx.reply('⚠️ Noma\'lum buyruq. Iltimos, tugmalardan foydalaning yoki /cancel deb yozing.');
   }
 }
 
@@ -1024,4 +1038,4 @@ async function processEditGroupLink(ctx, text) {
   }
 }
 
-module.exports = { handleTeacherText, handleTeacherActions };
+module.exports = { handleTeacherText, handleTeacherActions, clearState };

@@ -60,26 +60,31 @@ function clearState(userId) {
 async function handleAdminText(ctx) {
   const userId = ctx.from.id;
   const text = ctx.message?.text || '';
-  const state = getState(userId);
 
-  // Menu tugmalari
-  if (state.step === 'idle') {
-    switch (text) {
-      case '👨‍🏫 O\'qituvchi qo\'shish':
-        return await startAddTeacher(ctx);
-      case '👥 Guruh yaratish':
-        return await startCreateGroup(ctx);
-      case '🎓 O\'quvchi qo\'shish':
-        return await startAddStudentAdmin(ctx);
-      case '👤 Admin qo\'shish':
-        return await startAddAdmin(ctx);
-      case '📋 Ro\'yxat':
-        return await showListMenu(ctx);
-      case '📊 Statistika':
-        return await showStatisticsMenu(ctx);
-    }
-    return;
+  // Menu tugmalarini har doim tekshirish
+  switch (text) {
+    case '👨‍🏫 O\'qituvchi qo\'shish':
+      clearState(userId);
+      return await startAddTeacher(ctx);
+    case '👥 Guruh yaratish':
+      clearState(userId);
+      return await startCreateGroup(ctx);
+    case '🎓 O\'quvchi qo\'shish':
+      clearState(userId);
+      return await startAddStudentAdmin(ctx);
+    case '👤 Admin qo\'shish':
+      clearState(userId);
+      return await startAddAdmin(ctx);
+    case '📋 Ro\'yxat':
+      clearState(userId);
+      return await showListMenu(ctx);
+    case '📊 Statistika':
+      clearState(userId);
+      return await showStatisticsMenu(ctx);
   }
+
+  const state = getState(userId);
+  if (state.step === 'idle') return;
 
   // Multi-step flows
   await handleAdminFlow(ctx, state, text);
@@ -126,6 +131,8 @@ async function handleAdminFlow(ctx, state, text) {
       return await processEditGroupLink(ctx, text);
     case 'edit_student_name':
       return await processEditStudentName(ctx, text);
+    default:
+      return await ctx.reply('⚠️ Noma\'lum buyruq. Iltimos, tugmalardan foydalaning yoki /cancel deb yozing.');
   }
 }
 
@@ -867,4 +874,4 @@ async function processEditStudentName(ctx, text) {
   }
 }
 
-module.exports = { handleAdminText, handleAdminActions };
+module.exports = { handleAdminText, handleAdminActions, clearState };

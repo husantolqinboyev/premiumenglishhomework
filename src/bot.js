@@ -2,9 +2,9 @@ require('dotenv').config();
 const { Telegraf } = require('telegraf');
 
 const { handleStart, showPanel } = require('./handlers/common');
-const { handleAdminText, handleAdminActions } = require('./handlers/admin');
-const { handleTeacherText, handleTeacherActions } = require('./handlers/teacher');
-const { handleStudentText, handleStudentActions } = require('./handlers/student');
+const { handleAdminText, handleAdminActions, clearState: clearAdminState } = require('./handlers/admin');
+const { handleTeacherText, handleTeacherActions, clearState: clearTeacherState } = require('./handlers/teacher');
+const { handleStudentText, handleStudentActions, clearState: clearStudentState } = require('./handlers/student');
 const { getUserRole, getUserByTelegramId, createUser } = require('./supabase');
 
 if (!process.env.BOT_TOKEN) {
@@ -72,18 +72,42 @@ bot.use(async (ctx, next) => {
   return next();
 });
 
+// Command helpers
+function clearAllStates(userId) {
+  clearAdminState(userId);
+  clearTeacherState(userId);
+  clearStudentState(userId);
+}
+
 // =============================================
 // COMMANDS
 // =============================================
 
-bot.command('start', handleStart);
+bot.command('start', async (ctx) => {
+  clearAllStates(ctx.from.id);
+  await handleStart(ctx);
+});
 
 // Admin panel refresh
-bot.command('panel', async (ctx) => {
+bot.command(['panel', 'menu'], async (ctx) => {
+  clearAllStates(ctx.from.id);
   const user = await getUserByTelegramId(ctx.from.id);
   if (!user) return await ctx.reply('Siz ro\'yxatdan o\'tmadingiz. /start bosing.');
   const name = `${ctx.from.first_name || ''} ${ctx.from.last_name || ''}`.trim();
   await showPanel(ctx, user.role, name);
+});
+
+bot.command('cancel', async (ctx) => {
+  clearAllStates(ctx.from.id);
+  await ctx.reply('❌ Amal bekor qilindi.', {
+    reply_markup: { remove_keyboard: true }
+  });
+  // Qayta panelni ko'rsatish
+  const user = await getUserByTelegramId(ctx.from.id);
+  if (user) {
+    const name = `${ctx.from.first_name || ''} ${ctx.from.last_name || ''}`.trim();
+    await showPanel(ctx, user.role, name);
+  }
 });
 
 // =============================================

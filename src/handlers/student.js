@@ -43,18 +43,27 @@ function clearState(userId) {
 async function handleStudentText(ctx) {
   const userId = ctx.from.id;
   const text = ctx.message?.text || '';
+
+  // Menu tugmalarini har doim tekshirish
+  switch (text) {
+    case '📤 Vazifa yuborish':
+      clearState(userId);
+      return await startSubmitHomework(ctx);
+    case '✅ Tekshirilgan vazifalar':
+      clearState(userId);
+      return await showCheckedHomeworks(ctx);
+    case '👤 Profil':
+      clearState(userId);
+      return await showProfile(ctx);
+    case '🏆 Statistika':
+      clearState(userId);
+      return await showStatistics(ctx);
+  }
+
   const state = getState(userId);
   const fileInfo = ctx.message ? getFileInfo(ctx.message) : null;
 
-  if (state.step === 'idle') {
-    switch (text) {
-      case '📤 Vazifa yuborish': return await startSubmitHomework(ctx);
-      case '✅ Tekshirilgan vazifalar': return await showCheckedHomeworks(ctx);
-      case '👤 Profil': return await showProfile(ctx);
-      case '🏆 Statistika': return await showStatistics(ctx);
-    }
-    return;
-  }
+  if (state.step === 'idle') return;
 
   // File uploading
   if (fileInfo && state.step === 'homework_sending') {
@@ -65,6 +74,8 @@ async function handleStudentText(ctx) {
   if (state.step === 'homework_comment') {
     return await processHomeworkComment(ctx, text);
   }
+
+  return await ctx.reply('⚠️ Noma\'lum buyruq. Iltimos, tugmalardan foydalaning yoki /cancel deb yozing.');
 }
 
 // =============================================
@@ -351,4 +362,4 @@ async function handleStudentActions(ctx) {
   }
 }
 
-module.exports = { handleStudentText, handleStudentActions };
+module.exports = { handleStudentText, handleStudentActions, clearState };
