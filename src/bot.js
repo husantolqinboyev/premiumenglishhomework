@@ -43,15 +43,25 @@ function keepAlive() {
     return;
   }
 
-  const pingInterval = parseInt(process.env.PING_INTERVAL) || 600000; // Har 10 daqiqada
+  const pingInterval = parseInt(process.env.PING_INTERVAL) || 300000; // Har 5 daqiqada (safer for Render)
   const client = url.startsWith('https') ? https : http;
 
+  console.log(`📡 Keep-alive faol: ${url} har ${pingInterval / 60000} daqiqada.`);
+
   setInterval(() => {
-    client.get(url, (res) => {
-      console.log(`[${new Date().toISOString()}] 🚀 Keep-alive ping: ${res.statusCode}`);
-    }).on('error', (err) => {
-      console.error('❌ Keep-alive error:', err.message);
-    });
+    try {
+      client.get(url, (res) => {
+        if (res.statusCode === 200) {
+          console.log(`[${new Date().toISOString()}] ✅ Keep-alive ping: ${res.statusCode} (Bot uyg'oq)`);
+        } else {
+          console.warn(`[${new Date().toISOString()}] ⚠️ Keep-alive ping: ${res.statusCode}`);
+        }
+      }).on('error', (err) => {
+        console.error('❌ Keep-alive error:', err.message);
+      });
+    } catch (error) {
+      console.error('❌ Keep-alive unexpected error:', error.message);
+    }
   }, pingInterval);
 }
 
